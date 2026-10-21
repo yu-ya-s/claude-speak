@@ -39,6 +39,9 @@ RATE="${2:-0}"
 mkdir -p "$WORK_DIR"
 find "$WORK_DIR" -mindepth 1 -delete
 
+# 窓の見出しに出す作業ディレクトリ名（どのセッションの回答か分かるように）
+printf '%s' "$(basename "$PWD")" > "$WORK_DIR/label.txt"
+
 # Markdown を話し言葉向けに整形し、文に分割して chunks.txt に書く
 SUMMARY=$(python3 - "$SRC" "$WORK_DIR/chunks.txt" <<'PYEOF'
 import re, sys

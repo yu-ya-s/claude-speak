@@ -201,7 +201,7 @@ $xaml = @'
     <StackPanel>
       <DockPanel>
         <Button Name="stop_button" Style="{StaticResource IconButton}" DockPanel.Dock="Right" Width="28" Height="28" FontSize="11" Content="&#xE8BB;" ToolTip="停止して閉じる"/>
-        <TextBlock Text="Claude 読み上げ" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
+        <TextBlock Name="title_text" Text="Claude 読み上げ" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
       </DockPanel>
       <TextBlock Name="line_text" Foreground="{StaticResource Fg}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="0,8,0,10" Text=""/>
       <Slider Name="slider" Style="{StaticResource SeekSlider}" Minimum="0" Maximum="1" Margin="0,4,0,0"/>
@@ -245,6 +245,11 @@ $time_text = $win.FindName('time_text')
 $sentence_text = $win.FindName('sentence_text')
 $status_text = $win.FindName('status_text')
 $line_text = $win.FindName('line_text')
+$label_path = Join-Path $Dir "label.txt"
+if (Test-Path $label_path) {
+  $label = (Get-Content -Path $label_path -Raw -Encoding UTF8).Trim()
+  if ($label) { $win.FindName('title_text').Text = "Claude 読み上げ · $label" }
+}
 $pause_button = $win.FindName('pause_button')
 $work = [Windows.SystemParameters]::WorkArea
 $win.Left = $work.Right - $win.Width - 16
