@@ -1,6 +1,6 @@
 # claude-speak
 
-Claude Code の直前の回答を日本語で読み上げる Claude Code スキル（WSL 専用）。
+Claude Code の直前の回答を日本語で読み上げる Claude Code スキル。再生窓は Windows（WSL）版を同梱、他 OS は再生窓だけ実装すれば動く構成です。
 
 Microsoft Edge の音声合成（七海 Neural）で文ごとに音声を作り、生成済みの文から順に Windows 側の小さな再生窓で鳴らします。再生窓には進捗バー・5 秒戻る／進む・一時停止があり、読んでいる文も表示します。
 
@@ -8,7 +8,7 @@ Microsoft Edge の音声合成（七海 Neural）で文ごとに音声を作り�
 
 ## 動作条件
 
-- Windows 上の WSL2（Ubuntu など）で Claude Code を使っていること
+- Windows 上の WSL2（Ubuntu など）で Claude Code を使っていること（Mac / Linux は下記「Mac / Linux で使うには」）
 - `python3` と `python3 -m venv` が使えること
 - インターネット接続（音声は Microsoft のサーバーで合成されます。本文が外部へ送られる点に注意）
 
@@ -39,16 +39,30 @@ Claude Code の入力で次のように打ちます。
 - 誤読を直す：`dict.txt` に「語<TAB>読み」を 1 行ずつ追加する（例：`仰る<TAB>おっしゃる`）。音声だけ置き換わり、窓の表示は元の文のままです
 - 本文の整形（コードブロックや URL の省き方）：`speak.sh` 内の Python 部分
 
-## ファイル構成
+- 声や実装の切り替え：`config.env` を同じフォルダに置く（git 管理外）。例：
 
-| ファイル | 役割 |
-| --- | --- |
-| SKILL.md | Claude Code が読むスキル定義（/speak の手順） |
-| speak.sh | 本文の整形と文分割、合成と再生窓の起動、停止 |
-| synth.py | edge-tts で文ごとに mp3 と長さを生成 |
-| player.ps1 | Windows 側の再生窓（WPF） |
-| dict.txt | 読み替え辞書 |
-| install.sh | 導入スクリプト |
+  ```bash
+  VOICE=ja-JP-KeitaNeural   # 声
+  SYNTH=edge                # synth/<名前>.py
+  PLAYER=windows            # player/<名前>.sh（既定は OS から自動判定）
+  ```
+
+## 構成
+
+```
+speak.sh            本体：本文の整形と文分割、合成と再生窓の起動、停止（OS 非依存）
+synth/edge.py       合成：edge-tts で文ごとに mp3 と長さを生成（OS 非依存）
+player/windows.sh   再生窓アダプタ（WSL → Windows）
+player/windows.ps1  再生窓の実装（WPF）
+dict.txt            読み替え辞書
+install.sh          導入スクリプト
+docs/player-contract.md  再生窓を他 OS 向けに実装するときの契約
+```
+
+## Mac / Linux で使うには
+
+OS に依存するのは再生窓だけです。`docs/player-contract.md` の契約に沿って `player/mac.sh`（または `player/linux.sh`）と窓の実装を追加すれば、整形・合成・辞書はそのまま使えます。
+作者は Mac の動作確認環境を持っていないため、Mac 版の再生窓は同梱していません。実装した方は Pull Request を歓迎します。
 
 ## ライセンス
 

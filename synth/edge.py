@@ -8,7 +8,7 @@ import sys
 import edge_tts
 
 # 誤読する語の読み替え辞書（dict.txt：1行「語<TAB>読み」。上の行から順に適用）
-DICT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dict.txt")
+DICT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dict.txt")
 
 
 def load_dict():

@@ -1,30 +1,40 @@
 #!/usr/bin/env bash
-# 直前の回答テキストを Edge の音声合成（七海）で合成し、操作バー付きの窓で読み上げる。
+# 直前の回答テキストを文ごとに合成し、操作バー付きの窓で読み上げる。
 # 使い方: speak.sh <テキストファイル> [速さ -10..10]   /   speak.sh --stop
+#
+# 構成: 本体（整形と文分割）→ synth/<SYNTH>.py（合成）→ player/<PLAYER>.sh（再生窓）
+# OS ごとに違うのは player だけ。契約は docs/player-contract.md を参照
 set -u
-PS=$(command -v powershell.exe || echo /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe)
-TASKKILL=$(command -v taskkill.exe || echo /mnt/c/Windows/System32/taskkill.exe)
-PIDFILE=/tmp/claude-speak.pid
-VOICE=ja-JP-NanamiNeural
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PIDFILE=/tmp/claude-speak.pid
 
-# Windows 側の一時フォルダ（WSL パスと Windows パスの両方を持つ）
-WIN_TEMP=$("$PS" -NoProfile -Command '$env:TEMP' 2>/dev/null | tr -d '\r')
-if [ -z "$WIN_TEMP" ]; then echo "powershell.exe が見つかりません（WSL 専用）" >&2; exit 1; fi
-WORK_DIR_WIN="$WIN_TEMP\\claude-speak"
-WORK_DIR=$(wslpath -u "$WORK_DIR_WIN")
+# 既定の設定（環境変数か、同じフォルダの config.env で上書きできる。config.env は git 管理外）
+SYNTH=${SYNTH:-edge}
+VOICE=${VOICE:-ja-JP-NanamiNeural}
+PLAYER=${PLAYER:-}
+if [ -f "$SCRIPT_DIR/config.env" ]; then . "$SCRIPT_DIR/config.env"; fi
+
+# OS から再生窓の実装を選ぶ
+if [ -z "$PLAYER" ]; then
+  case "$(uname -s)" in
+    Darwin) PLAYER=mac ;;
+    Linux) if grep -qi microsoft /proc/version 2>/dev/null; then PLAYER=windows; else PLAYER=linux; fi ;;
+    *) PLAYER=unknown ;;
+  esac
+fi
+PLAYER_SH="$SCRIPT_DIR/player/$PLAYER.sh"
+if [ ! -x "$PLAYER_SH" ]; then
+  echo "この環境（$PLAYER）用の再生窓がありません。player/$PLAYER.sh を docs/player-contract.md の契約に沿って実装してください。" >&2
+  exit 1
+fi
+WORK_DIR=$("$PLAYER_SH" workdir)
 
 if [ "${1:-}" = "--stop" ]; then
   if [ -f "$PIDFILE" ]; then
     xargs -r kill 2>/dev/null < "$PIDFILE"
     rm -f "$PIDFILE"
   fi
-  # 窓（player.ps1）の powershell だけを止める
-  if [ -f "$WORK_DIR/player.pid" ]; then
-    player_pid=$(tr -d '\r\n ' < "$WORK_DIR/player.pid")
-    [ -n "$player_pid" ] && "$TASKKILL" /F /PID "$player_pid" >/dev/null 2>&1
-    rm -f "$WORK_DIR/player.pid"
-  fi
+  "$PLAYER_SH" stop "$WORK_DIR"
   echo "stopped"
   exit 0
 fi
@@ -90,11 +100,8 @@ if [ "$SENTENCES" -eq 0 ]; then echo "nothing to speak"; exit 0; fi
 SPEED=$(python3 -c "print(max(-10,min(10,int('$RATE'))))")
 
 # 合成を先に走らせ、窓は生成済みチャンクから順に再生する
-nohup "$SCRIPT_DIR/.venv/bin/python" "$SCRIPT_DIR/synth.py" "$WORK_DIR" "$VOICE" "$SPEED" >/dev/null 2>&1 &
+nohup "$SCRIPT_DIR/.venv/bin/python" "$SCRIPT_DIR/synth/$SYNTH.py" "$WORK_DIR" "$VOICE" "$SPEED" >/dev/null 2>&1 &
 echo $! > "$PIDFILE"
 
-PS1_WIN="$WIN_TEMP\\claude-speak-player.ps1"
-{ printf '\xEF\xBB\xBF'; cat "$SCRIPT_DIR/player.ps1"; } > "$(wslpath -u "$PS1_WIN")"
-nohup "$PS" -NoProfile -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File "$PS1_WIN" -Dir "$WORK_DIR_WIN" >/dev/null 2>&1 &
-echo $! >> "$PIDFILE"
+"$PLAYER_SH" start "$WORK_DIR"
 echo "speaking ($CHARS chars, $SENTENCES sentences, rate $RATE)"
