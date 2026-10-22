@@ -8,27 +8,30 @@ import sys
 
 import edge_tts
 
-# 誤読する語の読み替え辞書（dict.txt：1行「語<TAB>読み」。長い語から順に、英数字の語は単語単位で適用）
-DICT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dict.txt")
+# 誤読する語の読み替え辞書（1行「語<TAB>読み」。長い語から順に、英数字の語は単語単位で適用）
+# dict.txt は公開用、dict.local.txt は人名など公開しない語を書く（git 管理外）
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DICT_PATHS = [os.path.join(SKILL_DIR, "dict.txt"), os.path.join(SKILL_DIR, "dict.local.txt")]
 
 
 def load_dict():
     """辞書を読み、長い語から順に並べて返す（短い語が長い語の一部を先に壊さないように）。
     英数字だけの語は単語の途中（adapter の apt など）に一致しないよう境界付きの正規表現にする"""
     pairs = []
-    if not os.path.exists(DICT_PATH):
-        return pairs
-    with open(DICT_PATH, encoding="utf-8") as f:
-        for line in f:
-            line = line.rstrip("\n")
-            if not line.strip() or line.startswith("#") or "\t" not in line:
-                continue
-            word, reading = line.split("\t", 1)
-            if re.fullmatch(r"[\x21-\x7e]+", word):
-                pattern = re.compile(r"(?<![A-Za-z0-9])" + re.escape(word) + r"(?![A-Za-z0-9])")
-            else:
-                pattern = re.compile(re.escape(word))
-            pairs.append((word, reading, pattern))
+    for dict_path in DICT_PATHS:
+        if not os.path.exists(dict_path):
+            continue
+        with open(dict_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.rstrip("\n")
+                if not line.strip() or line.startswith("#") or "\t" not in line:
+                    continue
+                word, reading = line.split("\t", 1)
+                if re.fullmatch(r"[\x21-\x7e]+", word):
+                    pattern = re.compile(r"(?<![A-Za-z0-9])" + re.escape(word) + r"(?![A-Za-z0-9])")
+                else:
+                    pattern = re.compile(re.escape(word))
+                pairs.append((word, reading, pattern))
     pairs.sort(key=lambda pair: len(pair[0]), reverse=True)
     return pairs
 

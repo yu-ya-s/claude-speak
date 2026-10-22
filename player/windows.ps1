@@ -14,6 +14,7 @@ $script:waiting = $true
 $script:paused = $false
 $script:dragging = $false
 $script:pending = 0.0
+$script:opened = -1
 
 function Get-ChunkDuration([int]$i) {
   $dur_path = Join-Path $Dir ('{0:000}.dur' -f $i)
@@ -70,11 +71,26 @@ function Get-GlobalPos {
 }
 
 function Open-Chunk([int]$i, [double]$offset) {
+  # 同じ音声を Open し直すと位置指定が効かないため、開いている文の中では Position を直接動かす
+  if ($i -eq $script:opened -and -not $script:waiting) {
+    $mp.Position = [TimeSpan]::FromSeconds($offset)
+    $script:pending = 0.0
+    return
+  }
   $script:cur = $i
+  $script:opened = $i
   $script:pending = $offset
   $script:waiting = $false
   $mp.Open([Uri](Wav-Path $i))
   if ($script:paused) { $mp.Pause() } else { $mp.Play() }
+}
+
+# 別の文を開いた直後の位置指定（MediaOpened が来ない場合の保険として timer からも呼ぶ）
+function Apply-Pending {
+  if ($script:pending -gt 0 -and $mp.NaturalDuration.HasTimeSpan) {
+    $mp.Position = [TimeSpan]::FromSeconds($script:pending)
+    $script:pending = 0.0
+  }
 }
 
 function Seek-Global([double]$g) {
@@ -95,7 +111,7 @@ function Seek-Global([double]$g) {
 
 $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        Title="Claude 読み上げ" Width="400" SizeToContent="Height" Topmost="True"
+        Title="Claude 読み上げ" Width="560" SizeToContent="Height" Topmost="True"
         ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" FontFamily="Yu Gothic UI, Segoe UI">
   <Window.Resources>
@@ -203,7 +219,7 @@ $xaml = @'
         <Button Name="stop_button" Style="{StaticResource IconButton}" DockPanel.Dock="Right" Width="28" Height="28" FontSize="11" Content="&#xE8BB;" ToolTip="停止して閉じる"/>
         <TextBlock Name="title_text" Text="Claude 読み上げ" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
       </DockPanel>
-      <TextBlock Name="line_text" Foreground="{StaticResource Fg}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="0,8,0,10" Text=""/>
+      <TextBlock Name="line_text" Foreground="{StaticResource Fg}" FontSize="14" TextWrapping="Wrap" LineHeight="22" MaxHeight="66" TextTrimming="CharacterEllipsis" Margin="0,8,0,10" Text=""/>
       <Slider Name="slider" Style="{StaticResource SeekSlider}" Minimum="0" Maximum="1" Margin="0,4,0,0"/>
       <DockPanel Margin="0,2,0,6">
         <TextBlock Name="sentence_text" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" FontSize="11" Text="0/0"/>
@@ -253,16 +269,11 @@ if (Test-Path $label_path) {
 $pause_button = $win.FindName('pause_button')
 $work = [Windows.SystemParameters]::WorkArea
 $win.Left = $work.Right - $win.Width - 16
-$win.Top = $work.Bottom - 190
+$win.Top = $work.Bottom - 250
 $win.FindName('root').Add_MouseLeftButtonDown({ param($sender, $e) if (-not $script:dragging) { $win.DragMove() } })
 
 $mp = New-Object System.Windows.Media.MediaPlayer
-$mp.Add_MediaOpened({
-  if ($script:pending -gt 0) {
-    $mp.Position = [TimeSpan]::FromSeconds($script:pending)
-    $script:pending = 0.0
-  }
-})
+$mp.Add_MediaOpened({ Apply-Pending })
 $mp.Add_MediaEnded({
   $script:cur++
   $script:waiting = $true
@@ -309,6 +320,7 @@ $timer = New-Object System.Windows.Threading.DispatcherTimer
 $timer.Interval = [TimeSpan]::FromMilliseconds(200)
 $timer.Add_Tick({
   Refresh-Chunks
+  Apply-Pending
   $count = $script:chars.Count
   $done = Test-Path (Join-Path $Dir "done")
   if ($script:waiting) {
