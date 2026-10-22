@@ -66,6 +66,9 @@ s = re.sub(r'^\s{0,3}#{1,6}\s*', '', s, flags=re.M)                  # 見出し
 s = re.sub(r'^\s*[-*+]\s+', '', s, flags=re.M)                       # 箇条書き
 s = re.sub(r'^\s*\d+\.\s+', '', s, flags=re.M)                       # 番号付き
 s = re.sub(r'\*\*([^*]+)\*\*', r'\1', s)                             # 太字
+s = re.sub(r'\bi-[0-9a-f]{8,}\b', 'インスタンス', s)                  # EC2 のインスタンス ID
+s = re.sub(r'\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{7,40}\b', 'コミット', s)  # コミットハッシュ
+s = s.replace('→', ' から ')                                          # 矢印
 s = re.sub(r'[ \t]+', ' ', s)
 s = re.sub(r'\n{2,}', '\n', s).strip()
 
@@ -74,13 +77,17 @@ sentences = []
 for line in s.split('\n'):
     sentences += re.findall(r'[^。！？!?]+[。！？!?]*|[。！？!?]+', line)
 
-# 長い文は 80 文字程度で読点の位置で分割
-max_len = 80
+# 長い文は 120 文字程度で分割。切る位置は読点 → 中黒 → 空白の順で探し、単語の途中では切らない
+max_len = 120
 chunks = []
 for sentence in sentences:
     sentence = sentence.strip()
     while len(sentence) > max_len:
-        cut = sentence.rfind('、', 0, max_len)
+        cut = -1
+        for sep in ('、', '・', ' '):
+            cut = sentence.rfind(sep, 1, max_len)
+            if cut > 0:
+                break
         if cut <= 0:
             cut = max_len - 1
         chunks.append(sentence[:cut + 1])

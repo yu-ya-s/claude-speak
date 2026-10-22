@@ -1,4 +1,4 @@
-# 読み替え辞書：1行「語<TAB>読み」。上から順に単純置換するので、長い語（GitHub, PHPUnit, MySQL）は短い語（Git, PHP, SQL）より先に書く
+# 読み替え辞書：1行「語<TAB>読み」。長い語から順に置換するので並び順は自由。英数字だけの語は単語単位で一致（adapter の中の apt には当たらない）。大文字小文字は区別する
 # 日本語
 仰る	おっしゃる
 仰っ	おっしゃっ
@@ -79,3 +79,72 @@ LGTM	エルジーティーエム
 WIP	ウィップ
 PR	プルリク
 CI/CD	シーアイシーディー
+# 決済・外部サービス
+Alipay	アリペイ
+alipay	アリペイ
+Netstars	ネットスターズ
+netstars	ネットスターズ
+# AWS
+ALB	エーエルビー
+ASG	エーエスジー
+EIP	イーアイピー
+AMI	エーエムアイ
+IAM	アイアム
+SSM	エスエスエム
+ssm:SendCommand	エスエスエム センドコマンド
+HealthCheck	ヘルスチェック
+ReplaceUnhealthy	リプレイスアンヘルシー
+AZRebalance	エーゼットリバランス
+detach-instances	デタッチインスタンシズ
+resume-processes	レジュームプロセシズ
+fixed-response	フィックスドレスポンス
+source-ip	ソースアイピー
+HTTPCode_Target_5XX_Count	エイチティーティーピーコード ターゲット ごエックスエックス カウント
+5XX	ごエックスエックス
+healthy	ヘルシー
+unhealthy	アンヘルシー
+# インフラ・サーバー
+php8.2-fpm	ピーエイチピー 8.2 エフピーエム
+php-fpm	ピーエイチピー エフピーエム
+fpm	エフピーエム
+ondrej	オンドレイ
+noble	ノーブル
+apt	アプト
+uid/gid	ユーアイディー ジーアイディー
+sha256	シャー 256
+.env	ドットエンブ
+APP_DEBUG	アップデバッグ
+oauth	オーオース
+SSH	エスエスエッチ
+tcp	ティーシーピー
+IP	アイピー
+prio	プライオリティ
+host	ホスト
+path	パス
+forward	フォワード
+# 開発・Git
+newman	ニューマン
+pre_pr_check	プリ ピーアール チェック
+composer	コンポーザー
+deploy.yml	デプロイ ヤムル
+deploy	デプロイ
+webapp	ウェブアップ
+feature	フィーチャー
+origin	オリジン
+production	プロダクション
+develop	デベロップ
+merge commit	マージコミット
+merge	マージ
+conflict	コンフリクト
+migrate	マイグレート
+migrations	マイグレーションズ
+Rollback	ロールバック
+rollback	ロールバック
+terminate	ターミネート
+suspend	サスペンド
+bool	ブール
+GOGO_APL	ゴーゴー エーピーエル
+# 一般
+FCM	エフシーエム
+GD	ジーディー
+GET	ゲット

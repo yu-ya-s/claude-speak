@@ -3,15 +3,18 @@
 使い方: synth.py <作業フォルダ> <声の名前> <速さ -10..10>"""
 import asyncio
 import os
+import re
 import sys
 
 import edge_tts
 
-# 誤読する語の読み替え辞書（dict.txt：1行「語<TAB>読み」。上の行から順に適用）
+# 誤読する語の読み替え辞書（dict.txt：1行「語<TAB>読み」。長い語から順に、英数字の語は単語単位で適用）
 DICT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dict.txt")
 
 
 def load_dict():
+    """辞書を読み、長い語から順に並べて返す（短い語が長い語の一部を先に壊さないように）。
+    英数字だけの語は単語の途中（adapter の apt など）に一致しないよう境界付きの正規表現にする"""
     pairs = []
     if not os.path.exists(DICT_PATH):
         return pairs
@@ -21,13 +24,20 @@ def load_dict():
             if not line.strip() or line.startswith("#") or "\t" not in line:
                 continue
             word, reading = line.split("\t", 1)
-            pairs.append((word, reading))
+            if re.fullmatch(r"[\x21-\x7e]+", word):
+                pattern = re.compile(r"(?<![A-Za-z0-9])" + re.escape(word) + r"(?![A-Za-z0-9])")
+            else:
+                pattern = re.compile(re.escape(word))
+            pairs.append((word, reading, pattern))
+    pairs.sort(key=lambda pair: len(pair[0]), reverse=True)
     return pairs
 
 
 def apply_dict(sentence, pairs):
-    for word, reading in pairs:
-        sentence = sentence.replace(word, reading)
+    for _word, reading, pattern in pairs:
+        sentence = pattern.sub(reading, sentence)
+    # 辞書に無い識別子のアンダースコアは空白にして単語ごとに読ませる（辞書の後でないと語が壊れる）
+    sentence = re.sub(r"_+", " ", sentence)
     return sentence
 
 
