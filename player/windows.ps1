@@ -113,7 +113,7 @@ $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Claude 読み上げ" Width="560" SizeToContent="Height" Topmost="True"
         ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        ShowInTaskbar="False" FontFamily="Yu Gothic UI, Segoe UI">
+        ShowInTaskbar="False" ShowActivated="False" Focusable="False" FontFamily="Yu Gothic UI, Segoe UI">
   <Window.Resources>
     <SolidColorBrush x:Key="Bg" Color="#F01E1F24" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"/>
     <SolidColorBrush x:Key="Fg" Color="#F2F2F2" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"/>
@@ -271,6 +271,20 @@ $work = [Windows.SystemParameters]::WorkArea
 $win.Left = $work.Right - $win.Width - 16
 $win.Top = $work.Bottom - 250
 $win.FindName('root').Add_MouseLeftButtonDown({ param($sender, $e) if (-not $script:dragging) { $win.DragMove() } })
+
+# 窓がキーボードのフォーカスを奪わないようにする（閉じた後に入力先が端末へ戻らなくなるのを防ぐ）
+Add-Type -Namespace Native -Name Win32 -MemberDefinition @"
+[DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+[DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+"@
+$win.Add_SourceInitialized({
+  $hwnd = (New-Object System.Windows.Interop.WindowInteropHelper($win)).Handle
+  $gwl_exstyle = -20
+  $ws_ex_noactivate = 0x08000000
+  $ws_ex_toolwindow = 0x00000080
+  $style = [Native.Win32]::GetWindowLong($hwnd, $gwl_exstyle)
+  [Native.Win32]::SetWindowLong($hwnd, $gwl_exstyle, $style -bor $ws_ex_noactivate -bor $ws_ex_toolwindow) | Out-Null
+})
 
 $mp = New-Object System.Windows.Media.MediaPlayer
 $mp.Add_MediaOpened({ Apply-Pending })
