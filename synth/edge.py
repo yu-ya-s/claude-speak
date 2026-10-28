@@ -41,6 +41,8 @@ def apply_dict(sentence, pairs):
         sentence = pattern.sub(reading, sentence)
     # 辞書に無い識別子のアンダースコアは空白にして単語ごとに読ませる（辞書の後でないと語が壊れる）
     sentence = re.sub(r"_+", " ", sentence)
+    # 期間の「1日」は「いちにち」。日付の「10月1日」（ついたち）や「11日」は除く
+    sentence = re.sub(r"(?<![月\d])1日", "いちにち", sentence)
     return sentence
 
 
