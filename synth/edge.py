@@ -43,6 +43,8 @@ def apply_dict(sentence, pairs):
     sentence = re.sub(r"_+", " ", sentence)
     # 期間の「1日」は「いちにち」。日付の「10月1日」（ついたち）や「11日」は除く
     sentence = re.sub(r"(?<![月\d])1日", "いちにち", sentence)
+    # 頻度の「月5回」は「つき」。日付の「10月5日」や「毎月5日」「今月5件」は除く
+    sentence = re.sub(r"(?<![\d毎今先来翌前かカヶケ箇])月(?=\d)", "つき", sentence)
     return sentence
 
 
